@@ -1,3 +1,10 @@
 .env
 .env.local
 .env.*.local
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+patients.db
+*.db
