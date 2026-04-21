@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -20,19 +21,34 @@ logging.basicConfig(
 )
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logging.getLogger(__name__).info("Starting up; creating database tables if needed")
+async def _create_db_schema() -> None:
+    """Runs after the server is accepting traffic so Railway healthchecks are not blocked."""
+    log = logging.getLogger(__name__)
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        log.info("Database schema ready")
     except Exception:
-        logging.getLogger(__name__).exception(
-            "Database startup failed (check DATABASE_URL, TLS, and network access)"
+        log.exception(
+            "Database schema init failed — check DATABASE_URL, TLS, and that Postgres is reachable "
+            "from this service. /health will still work; data routes will error until DB is fixed."
         )
-        raise
-    yield
-    await engine.dispose()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log = logging.getLogger(__name__)
+    log.info("API process starting; binding HTTP before database schema init")
+    init_task = asyncio.create_task(_create_db_schema())
+    try:
+        yield
+    finally:
+        init_task.cancel()
+        try:
+            await init_task
+        except (asyncio.CancelledError, Exception):
+            pass
+        await engine.dispose()
 
 
 app = FastAPI(

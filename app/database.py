@@ -14,13 +14,16 @@ def _postgres_connect_args(url: str) -> dict:
         return {}
     if not url.startswith("postgresql+asyncpg"):
         return {}
+    timeout = float(os.getenv("DATABASE_CONNECT_TIMEOUT", "25"))
+    args: dict = {"timeout": timeout}
     if os.getenv("DATABASE_SSL", "").lower() in ("0", "false", "no", "off"):
-        return {}
+        return args
     host = urlparse(url.split("?", maxsplit=1)[0]).hostname or ""
     if host in ("localhost", "127.0.0.1", "::1", "host.docker.internal"):
-        return {}
+        return args
     # Hosted Postgres (Railway, Neon, etc.) expects TLS.
-    return {"ssl": True}
+    args["ssl"] = True
+    return args
 
 
 engine = create_async_engine(
