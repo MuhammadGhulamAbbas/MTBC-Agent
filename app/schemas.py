@@ -1,7 +1,7 @@
 import re
 from datetime import date, datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
@@ -257,7 +257,7 @@ class PatientUpdate(BaseModel):
         return normalize_us_phone(v)
 
     @model_validator(mode="after")
-    def reject_null_required_columns(self) -> PatientUpdate:
+    def reject_null_required_columns(self) -> Self:
         required_if_set = (
             "first_name",
             "last_name",

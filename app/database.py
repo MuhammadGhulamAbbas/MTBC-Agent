@@ -18,10 +18,15 @@ def _postgres_connect_args(url: str) -> dict:
     args: dict = {"timeout": timeout}
     if os.getenv("DATABASE_SSL", "").lower() in ("0", "false", "no", "off"):
         return args
-    host = urlparse(url.split("?", maxsplit=1)[0]).hostname or ""
+    parsed = urlparse(url.split("?", maxsplit=1)[0])
+    host = (parsed.hostname or "").lower()
     if host in ("localhost", "127.0.0.1", "::1", "host.docker.internal"):
         return args
-    # Hosted Postgres (Railway, Neon, etc.) expects TLS.
+    # Railway service-to-Postgres private DNS is not set up for client TLS the same
+    # way as public URLs; asyncpg with ssl=True often fails with EOF / handshake errors.
+    if host.endswith(".railway.internal"):
+        return args
+    # Hosted Postgres (public hostname: Neon, Supabase, Railway public URL, etc.).
     args["ssl"] = True
     return args
 
