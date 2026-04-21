@@ -1,0 +1,5 @@
+[deploy]
+# Bind all interfaces; default uvicorn host is 127.0.0.1 which makes Railway show "Application failed to respond".
+startCommand = '/bin/sh -c "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"'
+healthcheckPath = "/health"
+healthcheckTimeout = 300

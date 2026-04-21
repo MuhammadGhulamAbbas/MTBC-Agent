@@ -22,8 +22,15 @@ logging.basicConfig(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    logging.getLogger(__name__).info("Starting up; creating database tables if needed")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Database startup failed (check DATABASE_URL, TLS, and network access)"
+        )
+        raise
     yield
     await engine.dispose()
 
